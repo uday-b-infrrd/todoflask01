@@ -32,7 +32,7 @@ def index():
 def add():
     task_content = request.get_json()
     if task_content['content'] == '':
-        return jsonify({'error': 'content should not be empty'})
+        return jsonify({'error': 'content should not be empty'}),400
     else:          
         todo_content = task_content['content']
         try:
