@@ -2,8 +2,8 @@ import MySQLdb
 from flask import Flask, json,request,jsonify,Response
 from flask_mysqldb import MySQL
 from werkzeug.datastructures import HeaderSet
-import yaml
 from datetime import datetime
+import yaml
 
 app = Flask(__name__)
 
@@ -102,4 +102,4 @@ def toJsonFormat(row_header,sql_data):
     return json_data
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0')
