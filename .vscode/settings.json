@@ -1,0 +1,6 @@
+{
+    "editor.fontSize": 16,
+//   "python.pythonPath": "/home/udayb/Desktop/FlaskIntroduction/env/bin/python",
+    "python.analysis.extraPaths": ["/home/udayb/Desktop/FlaskIntroduction/env/bin/python"],
+    "python.autoComplete.extraPaths": ["/home/udayb/Desktop/FlaskIntroduction/env/bin/python"],
+}
