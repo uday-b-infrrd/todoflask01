@@ -1,4 +1,10 @@
-__pycache__
-.vscode
-test.py
+__pycache__/
+*.pyc
+.vscode/
+.idea/
+.env
 env/
+env/**
+*.log
+test.py
+Procfile
