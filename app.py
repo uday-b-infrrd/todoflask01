@@ -1,10 +1,11 @@
 from datetime import datetime
-from util.Format import Format
+from util.format import Format
 import yaml
 import MySQLdb
 from flask import Flask, json,request,jsonify,Response
 from flask_mysqldb import MySQL
 from flask_cors import CORS, cross_origin
+from contextlib import contextmanager
 
 app = Flask(__name__)
 format_obj = Format()
@@ -40,22 +41,30 @@ app.config['MYSQL_DB']= db['mysql_db']
 mysql = MySQL(app)
 # connection = mysql.connector.connect(**config)
 
+@contextmanager
+def my_database():
+    try:
+        # cur = getMysqlConnection()
+        # cur = connection.cursor(dictionary=True)
+        cur = mysql.connection.cursor()
+        yield cur
+    finally:
+        mysql.connection.commit()
+        cur.close()
 
 @app.route('/')
 @cross_origin()
 def index():
-    return jsonify({'message': 'help check'}),200
+    return jsonify({'message': 'helth check'}),200
 
 @app.route('/alltasks', methods=['GET'])
 @cross_origin()
 def all_tasks():
-    cur = mysql.connection.cursor()
-    # cur = getMysqlConnection()
-    # cur = connection.cursor(dictionary=True)
-    cur.execute("select * from todo")
-    all_tasks = cur.fetchall()
+    with my_database() as cur:
+        sql = "select * from todo"
+        cur.execute(sql)
+        all_tasks = cur.fetchall()
     row_header = [decription[0] for decription in cur.description]
-    cur.close()
     if not all_tasks:
         return jsonify({'error' : 'No tasks available'}),404
     else:
@@ -66,16 +75,15 @@ def all_tasks():
 @cross_origin()
 def task(task_id):
     try:
-        cur = mysql.connection.cursor()
-        if(cur.execute("select * from todo where id={}".format(task_id))):
-            cur.execute("select * from todo where id={}".format(task_id))
-            sql_data = cur.fetchall()
-            row_header = [decription[0] for decription in cur.description]
-            mysql.connection.commit()
-            cur.close()
-            return jsonify(format_obj.toJsonFormat(row_header,sql_data)),200
-        else:
-            return jsonify({'error' : 'no data present with task that id'}),404
+        sql = "select * from todo where id=(%s)"
+        with my_database() as cur:
+            if(cur.execute(sql,(task_id,))):
+                cur.execute(sql,(task_id,))
+                sql_data = cur.fetchall()
+                row_header = [decription[0] for decription in cur.description]
+                return jsonify(format_obj.toJsonFormat(row_header,sql_data)),200
+            else:
+                return jsonify({'error' : 'no data present with task that id'}),404
     except(MySQLdb.Error, MySQLdb.Warning)as sqlError:
         return jsonify({'error': 'There was an issue updating your task','message': sqlError}),500
 
@@ -89,11 +97,10 @@ def add():
     else:          
         try:
             datenow = datetime.now().date()
-            cur = mysql.connection.cursor()
-            cur.execute("INSERT into todo(content, date_created) values(%s,%s)",(todo_content,datenow))
-            mysql.connection.commit()
-            cur.close()
-            return jsonify({'message': 'Successfully task added'}),200
+            sql = "INSERT into todo(content, date_created) values(%s,%s)"
+            with my_database() as cur:
+                cur.execute(sql,(todo_content,datenow,))
+                return jsonify({'message': 'Successfully task added'}),200
         except(MySQLdb.Error, MySQLdb.Warning) as sqlError:
             print(sqlError)
             return jsonify({'error' : 'There was an issue adding your task',
@@ -104,17 +111,17 @@ def add():
 @cross_origin()
 def delete(task_id):
     try:
-        cur = mysql.connection.cursor()
-        if(cur.execute("select * from todo where id={}".format(task_id))):
-            cur.execute("delete from todo where id={}".format(task_id))
-            mysql.connection.commit()
-            cur.close()
-            return jsonify({'message': 'task deleted successfully'}),200
-        else:
-            return jsonify({'error':'no data present with task id'}),404
+        with my_database() as cur:
+            sql_id_exists = "select * from todo where id=(%s)"
+            if(cur.execute(sql_id_exists,(task_id,))):
+                sql_id_delete = "delete from todo where id=(%s)"
+                cur.execute(sql_id_delete,(task_id,))
+                return jsonify({'message': 'task deleted successfully'}),200
+            else:
+                return jsonify({'error':'no data present with task id'}),404
     except(MySQLdb.Error, MySQLdb.Warning)as sqlError:
         print(sqlError)
-        return Response({'error': 'There was a problem deleting that task...plz retry',
+        return Response({'error': 'There was a problem deleting that task...please retry',
                         'message': sqlError}),500
 
 @app.route('/update/<task_id>', methods=['PUT'])
@@ -126,14 +133,14 @@ def update(task_id):
         return jsonify({'error': 'content should not be empty'}),400
     else:
         try:
-            cur = mysql.connection.cursor()
-            if(cur.execute("select * from todo where id={}".format(task_id))):
-                cur.execute("update todo set content=(%s) where id=(%s)",(content,task_id))
-                mysql.connection.commit()
-                cur.close()
-                return jsonify({'message': 'task updated successfully'}),200
-            else:
-                return jsonify({'error' : 'no data present with task that id'}),404
+            with my_database() as cur:
+                sql_id_exists = "select * from todo where id=(%s)"
+                if(cur.execute(sql_id_exists,(task_id,))):
+                    sql_update = "update todo set content=(%s) where id=(%s)"
+                    cur.execute(sql_update,(content,task_id,))
+                    return jsonify({'message': 'task updated successfully'}),200
+                else:
+                    return jsonify({'error' : 'no data present with task that id'}),404
         except(MySQLdb.Error, MySQLdb.Warning)as sqlError:
             return jsonify({'error': 'There was an issue updating your task','message': sqlError}),500
 
