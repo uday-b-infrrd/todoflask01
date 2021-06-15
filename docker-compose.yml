@@ -1,0 +1,42 @@
+version: "3.7"
+
+networks: 
+    backend-network:
+# volumes: 
+#     db-data:
+
+services: 
+    db:
+        image: mysql:5.7
+        restart: always
+        networks: 
+            - backend-network
+        volumes:
+            - ./db:/docker-entrypoint-initdb.d/:ro
+            # - db-data:/var/lib/mysql
+        ports: 
+            - 32000:3306
+        expose: 
+            - '3306'
+        environment: 
+            - MYSQL_DATABASE=flaskapp
+            # - MYSQL_USER=root
+            - MYSQL_PASSWORD=root
+            - MYSQL_ROOT_PASSWORD=root
+        
+    
+    app:
+        build: 
+            context: .
+            dockerfile: Dockerfile
+        restart: always
+        # volumes: 
+        #     - ./backend:/app
+        ports: 
+            - 8000:5000
+        expose: 
+            - '5000'
+        links: 
+            - db
+        networks: 
+            - backend-network

@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+util/__pycache__
+.vscode/
+.idea/
+.env
+env/
+env/**
+*.log
+test.py
+Procfile
